@@ -796,7 +796,86 @@ class SLMController(QtWidgets.QWidget):
 
 		self.thorCamInterface.resumeUpdateThread()
 
+	#trapSLMFourCorners = 
+	# We want to adjust the local addressing SLM such that it matches the positions of the four corners 
+	def generate_trapSLM_corners(self): 
+		test_array = [np.array([544.99621485, 321.99843666]), np.array([537.00379237, 128.00004969]), np.array([735.00273043, 316.00252588]), np.array([727.99998694, 121.99667972])]
+		test_array = np.ones(np.shape(test_array))*20+test_array
+		return test_array
+	
+	def get_d_from_coords(self, corners, point):
+		xDis = corners[0][0]-corners[point][0]
+		yDis = corners[0][1]-corners[point][1]
+		d = np.sqrt(xDis**2 + yDis**2)
+		return d
 
+
+	def calibrateLA(self): 
+		self.calibrateThorCam()
+		self.calibrateSLMCorners()
+		la_corners = self.cameraCornerPositions
+		trap_corners = self.generate_trapSLM_corners()
+		trap_corners = trap_corners * np.reshape(np.array([1/3, 1/2]*4), (4,2)) 
+		DeltaX = trap_corners[0][0] - la_corners[0][0]
+		DeltaY = trap_corners[0][1] - la_corners[0][1]
+	
+		offset = np.reshape(np.array([DeltaX, DeltaY]*4),(4,2))
+		la_corners_offset = la_corners + offset
+		origin = np.reshape(np.array([la_corners_offset[0][0], la_corners_offset[0][1]]*4),(4,2))
+
+		dtrapx = self.get_d_from_coords(trap_corners, 2)
+		dtrapy = self.get_d_from_coords(trap_corners, 1)
+		dlax = self.get_d_from_coords(la_corners_offset, 2)
+		dlay = self.get_d_from_coords(la_corners_offset, 1) 
+
+		mag = np.reshape(np.array([dtrapx / dlax, dtrapy / dlay]*4), (4,2)) 
+		print(mag)
+		la_corners_offset_mag = (la_corners_offset-origin)*mag + origin
+		
+		for i in range(len(la_corners)): 
+			x = la_corners[i][0]
+			y = la_corners[i][1]
+			plt.scatter(x, y, color= "g", alpha= 0.5)
+			plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
+		for i in range(len(trap_corners)): 
+			x = trap_corners[i][0]
+			y = trap_corners[i][1]
+			plt.scatter(x, y, color= "r", alpha= 0.5 )
+			plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
+		for i in range(len(la_corners_offset)): 
+			x = la_corners_offset[i][0]
+			y = la_corners_offset[i][1]
+			plt.scatter(x, y, color= "b", alpha=0.5)
+			plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
+		for i in range(len(la_corners_offset_mag)): 
+			x = la_corners_offset_mag[i][0]
+			y = la_corners_offset_mag[i][1]
+			plt.scatter(x, y, color= "y",  alpha= 0.5)
+			plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
+		plt.show()
+
+		theta_trap = np.arctan(trap_corners[1][1]/trap_corners[1][0])
+		theta_la = np.arctan(la_corners_offset_mag[1][1]/la_corners_offset_mag[1][0])
+		theta_diff = theta_la  - theta_trap
+
+		r_theta_diff = np.array([[np.cos(theta_diff),-np.sin(theta_diff)],[np.sin(theta_diff),np.cos(theta_diff)]])
+		rotation_transformed = la_corners_offset_mag - origin
+		rotated1 = np.matmul(r_theta_diff,rotation_transformed[1])
+		rotated2 = np.matmul(r_theta_diff,rotation_transformed[2]) 
+		rotated3 = np.matmul(r_theta_diff,rotation_transformed[3]) 
+		la_corners_rotated = [np.array(rotation_transformed[0]), 
+			np.array(rotated1), 
+			np.array(rotated2), 
+			np.array(rotated3)]+origin
+		print("LA original")
+		print(la_corners)
+		print("transformed")
+		print(la_corners_rotated)
+		print("trap corners")
+		print(trap_corners)
+		
+		return [offset, mag, theta_diff]
+	
 	# We want to find AOD frequencies that match the positions of the four corners
 	def calibrateAOD(self):
 
@@ -1569,15 +1648,14 @@ def main():
 def main2():
 	app = QtWidgets.QApplication(sys.argv)
 
-	display = SLMDisplay()
-
-
-
+	slmController = SLMController(app, shouldEnableSLMDisplay=True, shouldEnableThorcam=True)
+	slmController.calibrateLA()
+	#slmController.show()
 	app.exec_()
 
 
 if __name__ == "__main__":
-	main()
+	main2()
 	# app = QtWidgets.QApplication(sys.argv)
 
 	# print(QtWidgets.QDesktopWidget().screenGeometry(1))
