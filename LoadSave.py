@@ -10,7 +10,7 @@ class LoadSavePanel(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
 
-        self.directory = "SavedConfigurations/"
+        self.directory = "../SavedConfigurations/"
 
         self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)

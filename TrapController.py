@@ -9,7 +9,7 @@ from LoadSave import LoadSavePanel
 from Characters import characterDict
 from network_server import NetworkServer
 
-# test #test #test
+
 
 class Column:
     def __init__(self):
@@ -569,7 +569,7 @@ class TrapArrangement(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         
-        self.setFixedWidth(800) #changed from 400 on laptop
+        self.setFixedWidth(600) #change to 800 on laptop, 400 on beast
 
 
 
@@ -789,7 +789,7 @@ def main():
 
     shouldRunNetworkServer = False
     shouldEnableSLMDisplay = True
-    shouldEnableThorcam = False
+    shouldEnableThorcam = True
 
     trapControllerInterface = TrapControllerInterface(app, shouldRunNetworkServer, shouldEnableSLMDisplay, shouldEnableThorcam)
     trapControllerInterface.show()

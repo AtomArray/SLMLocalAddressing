@@ -398,11 +398,14 @@ class SLMController(QtWidgets.QWidget):
 			#self.layout.setColumnStretch(i, 1)
 			self.layout.setColumnMinimumWidth(i, 250)
 
-		# self.setFixedWidth(850)
+		# self.setFixedWidth(850) #On beast
 		# self.setFixedHeight(800)
 
-		self.setFixedWidth(2000) #Changed this to use on laptop
-		self.setFixedHeight(2000)
+		# self.setFixedWidth(2000) #Changed this to use on laptop
+		# self.setFixedHeight(2000)
+
+		self.setFixedWidth(1500) #Changed this to use on monitor
+		self.setFixedHeight(1000)
 
 		print("Establishing initial blaze grating.")
 		self.setBlazeGrating(0.027, 0.027, apertureSize=512)
@@ -1377,9 +1380,12 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 
 		geometryMain = QtWidgets.QDesktopWidget().screenGeometry(0)
 		geometrySLM = QtWidgets.QDesktopWidget().screenGeometry(1)
+		geometryLaptop = QtWidgets.QDesktopWidget().screenGeometry(2)
+		numberOfScreens =  QtWidgets.QDesktopWidget().screenCount()
 		print("Main geometry:", geometryMain)
 		print("SLM Geometry:", geometrySLM)
-
+		print("Laptop Screen:", geometryLaptop)
+		print("Number of screens:", numberOfScreens)
 
 		self.dims = [1024, 1024]
 		self.xs = (np.arange(self.dims[0]) - self.dims[0]//2) / (self.dims[0]//2)
@@ -1398,7 +1404,7 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 		if displayOnSLM:
 			self.width = geometrySLM.width()
 			self.height = geometrySLM.height()
-
+			print([geometryMain.width(), 0, self.width, self.height])
 			self.setGeometry(geometryMain.width(), 0, self.width, self.height)
 		else: # Testing purposes, dipslay on main screen
 			self.width = geometryMain.width()

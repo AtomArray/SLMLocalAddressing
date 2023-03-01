@@ -18,7 +18,7 @@ class ThorCam():
 	is_test = False
 
 	def __init__(self, color="imaging"): 
-		camera_data = ThorCamHardware.create_camera_list(5)
+		camera_data = ThorCamHardware.create_camera_list(2)
 		ThorCamHardware.uc480.is_GetCameraList(ctypes.byref(camera_data))
 
 		# Define serial numbers for the two cameras.
@@ -55,7 +55,7 @@ class ThorCam():
 			return
 
 
-		cam = Camera(camera.CameraID, "camera_profile.tcp")
+		cam = Camera(camera.CameraID, "camera_profile_test.tcp")
 
 		# self.cam = cam
 		# return
@@ -71,7 +71,7 @@ class ThorCam():
 
 			target_exposure = 2 # ms unit
 		elif color=="imaging":
-			# self.aoi = [400, 200, 700, 800]
+			#self.aoi = [400, 200, 700, 800]
 			self.aoi = [000, 0, 1280, 1024]
 			target_exposure = 0.1 # ms unit
 		else:
@@ -89,7 +89,7 @@ class ThorCam():
 		cam.printSettings()
 
 		self.cam = cam
-
+		cam.captureImageTest()
 	# Nov 8 2018, Added by DK
 	def setExposure(self,exposure):
 		if self.is_test:
@@ -121,13 +121,12 @@ class ThorCam():
 	def getImage(self):
 		if self.is_test:
 			return np.zeros((128, 128))
-
 		return self.cam.captureImage()
 
 
 def main():
 	# pass
-	blueCam = ThorCam()
+	blueCam = ThorCam(color="imaging")
 	im = blueCam.getImage()
 
 	plt.imshow(im)
@@ -136,7 +135,6 @@ def main():
 
 
 	im = blueCam.getImage()
-
 	plt.imshow(im)
 	plt.colorbar()
 	plt.show()

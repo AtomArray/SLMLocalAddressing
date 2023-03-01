@@ -80,12 +80,13 @@ class AOIRect(ctypes.Structure):
                 ("s32Height", ctypes.wintypes.INT)]
 
 # load the DLL
-#uc480_dll = ctypes.util.find_library('uc480')
-#if uc480_dll is None:
-#    print 'uc480.dll not found'
+
+# uc480_dll = ctypes.util.find_library('uc480')
+# if uc480_dll is None:
+#    print('uc480.dll not found')
 
 
-uc480 = ctypes.cdll.LoadLibrary("""c:\\Windows\\System32\\uc480_64.dll""")
+uc480 = ctypes.cdll.LoadLibrary("uc480_64.dll")#""""c:\\Windows\\System32\\uc480_64.dll""")
 
 
 # Helper functions
@@ -317,7 +318,21 @@ class Camera(Handle):
     # @return A 8 bit numpy array containing the data from the camera.
     #
     def getImage(self):
-        check(uc480.is_CopyImageMem(self, self.image, self.id, self.data.ctypes.data), "is_CopyImageMem")
+        # dta_pointer = self.data.ctypes.data.astype('int64')
+        #print(self.data.ctypes.data.type())
+        #test_int =numpy.int(self.data.ctypes.data)
+        #check(uc480.is_CopyImageMem(self, self.image, self.id, self.data.ctypes.data), "is_CopyImageMem")
+        func = uc480.is_CopyImageMem
+        func.argtypes = (
+            ctypes.wintypes.HANDLE,
+            ctypes.c_char_p, 
+            ctypes.c_int, 
+            ctypes.c_int
+            )
+        # func.restype = ctypes.
+        check(func(self, self.image, self.id, self.data.ctypes.data),"is_CopyImageMem")
+        #not checking is_copyImageMem since 02/27/2023
+        print(self.data)
         return self.data
 
     ## getNextImage
@@ -404,7 +419,9 @@ class Camera(Handle):
     # the intermediate buffer that we will copy the data from the camera into.
     #
     def setBuffers(self):
+        print("setting the buffers")
         self.data = numpy.zeros((self.im_height, self.im_width), dtype = numpy.uint8)
+        #self.data[0][0]=1
         if self.image:
             check(uc480.is_FreeImageMem(self, self.image, self.id))
         self.image = ctypes.c_char_p()
@@ -807,7 +824,7 @@ if __name__ == "__main__":
 
     from PIL import Image
 
-    cam = Camera(1)
+    cam = Camera(0)
     reps = 50
 
     if 0:

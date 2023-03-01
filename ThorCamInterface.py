@@ -111,8 +111,9 @@ class ThorCamInterface(QtWidgets.QWidget):
 
 
 		if enable:
-			#self.thorcam = ImagingSourceCam() # Use transmission ImagingSource camera
-			self.thorcam = ThorCam("trapping") # Use trapping side Thorcam #4/21/2022 DB commented this and uncommented above line
+			self.thorcam = ImagingSourceCam() # Use transmission ImagingSource camera
+			#self.thorcam = ThorCam("trapping") # Use trapping side Thorcam #4/21/2022 DB commented this and uncommented above line
+			# Using the ImagingSourceCam for testing Sophie 2/28/2023 		
 		else:
 			self.thorcam = ThorCam("test")
 

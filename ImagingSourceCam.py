@@ -32,7 +32,8 @@ class ImagingSourceCam:
 		# Open a device with hard coded unique name:
 		# self.Camera.open("DMM 27UP031-ML 31910373")
 		# self.Camera.open("DMx 72BUC02 18810076")
-		self.Camera.open("DMK 27BUP031 47910655")
+		#self.Camera.open("DMK 27BUP031 47910655")
+		self.Camera.open("TIS UVC Device 12120711")
 
 
 		# Print all available formats for camera
