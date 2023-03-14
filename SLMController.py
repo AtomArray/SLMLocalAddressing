@@ -808,7 +808,12 @@ class SLMController(QtWidgets.QWidget):
 		yDis = corners[0][1]-corners[point][1]
 		d = np.sqrt(xDis**2 + yDis**2)
 		return d
-
+	
+	def origin(self, array): 
+		return np.reshape(np.array([array[0][0], array[0][1]]*4),(4,2))
+	
+	def rotation_mat(self, theta): 
+		return np.array([[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]])
 
 	def calibrateLA(self): 
 		self.calibrateThorCam()
@@ -816,6 +821,9 @@ class SLMController(QtWidgets.QWidget):
 		la_corners = self.cameraCornerPositions
 		trap_corners = self.generate_trapSLM_corners()
 		trap_corners = trap_corners * np.reshape(np.array([1/3, 1/2]*4), (4,2)) 
+		trap_corners -= self.origin(trap_corners)
+		rand_theta = np.pi/6
+		
 		DeltaX = trap_corners[0][0] - la_corners[0][0]
 		DeltaY = trap_corners[0][1] - la_corners[0][1]
 	
@@ -829,7 +837,7 @@ class SLMController(QtWidgets.QWidget):
 		dlay = self.get_d_from_coords(la_corners_offset, 1) 
 
 		mag = np.reshape(np.array([dtrapx / dlax, dtrapy / dlay]*4), (4,2)) 
-		print(mag)
+		
 		la_corners_offset_mag = (la_corners_offset-origin)*mag + origin
 		
 		for i in range(len(la_corners)): 
