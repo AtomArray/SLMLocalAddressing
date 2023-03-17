@@ -733,6 +733,9 @@ class TrapControllerInterface(QtWidgets.QWidget):
         if "ZERNIKE" in string.upper():
             self.slmController.updateZernikeFromString(string)
 
+        # if "LA_CALIBRATION" in string.upper(): 
+
+
 
     def getCurrentConfiguration(self):
         # try:

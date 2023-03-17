@@ -6,6 +6,7 @@ from PyQt5 import QtGui
 # from PySide2 import (QtWidgets, QtCore, QtGui)
 import pyqtgraph as pg
 import numpy as np
+import cv2
 import time
 from threading import Thread
 import numexpr
@@ -14,7 +15,8 @@ import matplotlib.pyplot as plt
 from ThorCamInterface import ThorCamInterface
 from AODClient import AODClient
 import zernike
-from skimage.transform import rotate
+from skimage.transform import rotate, rescale, resize 
+from skimage.io import imread, imshow
 
 
 import pyfftw
@@ -199,6 +201,7 @@ class SLMZernikeCoefficients(QtWidgets.QTableWidget):
 		self.coefficients = np.array([zernike.ordered_polynomials[i][2] for i in range(len(zernike.ordered_polynomials))])
 		self.coefficients = np.append(self.coefficients, 0)#This is for adding the roation angle Sepehr 9/8/2022
 		self.coefficients = np.append(self.coefficients, 0)#This is for adding the Aperture mask
+		self.coefficients = np.append(self.coefficients, 1)#This is for zooming into the hologram
 
 
 
@@ -208,7 +211,7 @@ class SLMZernikeCoefficients(QtWidgets.QTableWidget):
 
 
 		self.setColumnCount(2)
-		self.setRowCount(len(zernike.ordered_polynomials)+2)
+		self.setRowCount(len(zernike.ordered_polynomials)+3)### Must adjust is adding more rows
 
 		self.setFont(QtGui.QFont('Arial', 9))
 
@@ -233,6 +236,12 @@ class SLMZernikeCoefficients(QtWidgets.QTableWidget):
 		self.item(i+2, 0).setFlags(QtCore.Qt.ItemIsEnabled)
 		##############
 
+		#ADDING A ZOOM OPTION HERE #Sophie 03/16/2023 
+		self.setItem(i+3, 0, QtWidgets.QTableWidgetItem('Zoom'))
+		self.setItem(i+3, 1, QtWidgets.QTableWidgetItem("1"))
+		self.item(i+3, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+
+		############## 
 		header = self.horizontalHeader()
 		header.setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
 		header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
@@ -798,6 +807,19 @@ class SLMController(QtWidgets.QWidget):
 
 	#trapSLMFourCorners = 
 	# We want to adjust the local addressing SLM such that it matches the positions of the four corners 
+	def rotation_mat(self, theta): 
+		return np.array([[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]])
+	
+	def rotate(self, array, theta): 
+		array_rot = np.zeros(np.shape(array))
+		for i in range(len(array)): 
+			array_rot[i] = np.matmul(self.rotation_mat(theta), array[i])
+		return array_rot
+		
+	def to_origin_frame(self, array): 
+			origin =  np.reshape(np.array([array[0][0], array[0][1]]*4),(4,2))
+			return array - origin
+
 	def generate_trapSLM_corners(self): 
 		test_array = [np.array([544.99621485, 321.99843666]), np.array([537.00379237, 128.00004969]), np.array([735.00273043, 316.00252588]), np.array([727.99998694, 121.99667972])]
 		test_array = np.ones(np.shape(test_array))*20+test_array
@@ -809,37 +831,39 @@ class SLMController(QtWidgets.QWidget):
 		d = np.sqrt(xDis**2 + yDis**2)
 		return d
 	
-	def origin(self, array): 
-		return np.reshape(np.array([array[0][0], array[0][1]]*4),(4,2))
 	
-	def rotation_mat(self, theta): 
-		return np.array([[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]])
-
 	def calibrateLA(self): 
 		self.calibrateThorCam()
 		self.calibrateSLMCorners()
 		la_corners = self.cameraCornerPositions
+		la_corners = self.to_origin_frame(la_corners)
 		trap_corners = self.generate_trapSLM_corners()
+		trap_corners = self.to_origin_frame(trap_corners)
 		trap_corners = trap_corners * np.reshape(np.array([1/3, 1/2]*4), (4,2)) 
-		trap_corners -= self.origin(trap_corners)
-		rand_theta = np.pi/6
-		
-		DeltaX = trap_corners[0][0] - la_corners[0][0]
-		DeltaY = trap_corners[0][1] - la_corners[0][1]
+		trap_corners = self.rotate(trap_corners, np.pi/6)
+		#trap_corners -= self.origin(trap_corners)
+
+		delta_x = trap_corners[0][0] - la_corners[0][0]
+		delta_y = trap_corners[0][1] - la_corners[0][1]
 	
-		offset = np.reshape(np.array([DeltaX, DeltaY]*4),(4,2))
+		offset = np.reshape(np.array([delta_x, delta_y]*4),(4,2))
+		
 		la_corners_offset = la_corners + offset
-		origin = np.reshape(np.array([la_corners_offset[0][0], la_corners_offset[0][1]]*4),(4,2))
 
 		dtrapx = self.get_d_from_coords(trap_corners, 2)
 		dtrapy = self.get_d_from_coords(trap_corners, 1)
 		dlax = self.get_d_from_coords(la_corners_offset, 2)
 		dlay = self.get_d_from_coords(la_corners_offset, 1) 
-
 		mag = np.reshape(np.array([dtrapx / dlax, dtrapy / dlay]*4), (4,2)) 
 		
-		la_corners_offset_mag = (la_corners_offset-origin)*mag + origin
-		
+		la_corners_offset_mag = (la_corners_offset)*mag
+	
+		a = trap_corners[1]/np.linalg.norm(trap_corners[1])
+		b = la_corners_offset_mag[1]/np.linalg.norm(la_corners_offset_mag[1])
+		theta = np.arccos(np.dot(a,b))
+
+		la_corners_offset_mag_rot = self.rotate(la_corners_offset_mag, theta)
+
 		for i in range(len(la_corners)): 
 			x = la_corners[i][0]
 			y = la_corners[i][1]
@@ -860,29 +884,15 @@ class SLMController(QtWidgets.QWidget):
 			y = la_corners_offset_mag[i][1]
 			plt.scatter(x, y, color= "y",  alpha= 0.5)
 			plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
-		plt.show()
+		for i in range(len(la_corners_offset_mag_rot)): 
+			x = la_corners_offset_mag_rot[i][0]
+			y = la_corners_offset_mag_rot[i][1]
+			plt.scatter(x, y, color= "k",  alpha= 0.5)
+			plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
+		plt.axis('scaled')
+		plt.show() 
 
-		theta_trap = np.arctan(trap_corners[1][1]/trap_corners[1][0])
-		theta_la = np.arctan(la_corners_offset_mag[1][1]/la_corners_offset_mag[1][0])
-		theta_diff = theta_la  - theta_trap
-
-		r_theta_diff = np.array([[np.cos(theta_diff),-np.sin(theta_diff)],[np.sin(theta_diff),np.cos(theta_diff)]])
-		rotation_transformed = la_corners_offset_mag - origin
-		rotated1 = np.matmul(r_theta_diff,rotation_transformed[1])
-		rotated2 = np.matmul(r_theta_diff,rotation_transformed[2]) 
-		rotated3 = np.matmul(r_theta_diff,rotation_transformed[3]) 
-		la_corners_rotated = [np.array(rotation_transformed[0]), 
-			np.array(rotated1), 
-			np.array(rotated2), 
-			np.array(rotated3)]+origin
-		print("LA original")
-		print(la_corners)
-		print("transformed")
-		print(la_corners_rotated)
-		print("trap corners")
-		print(trap_corners)
-		
-		return [offset, mag, theta_diff]
+		return [offset, mag, theta]
 	
 	# We want to find AOD frequencies that match the positions of the four corners
 	def calibrateAOD(self):
@@ -1529,7 +1539,6 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 		# self.V_2pi = 213 # From technical spec documents
 		self.V_2pi = 141
 
-
 	# phaseProfile encodes phase at each pixel in radians, represented in floating points.
 	def setImage(self, phaseProfile_arg, zernikeCoefficients=None):
 		if not self.enable:
@@ -1577,10 +1586,34 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 		#Rotating hologram here!! Sepehr 9/8/2022
 		temp = self.finalOutputPhaseProfile_radians
 		if type(zernikeCoefficients) != type(None):
-			self.finalOutputPhaseProfile_radians = rotate(temp, zernikeCoefficients[-2])#The -2nd order to be the rotation
-		#
+			self.finalOutputPhaseProfile_radians = rotate(temp, zernikeCoefficients[-3])#The -2nd order to be the rotation
 
+		#Resizing the hologram here!! Sophie 3/16/2023 
+		temp = self.finalOutputPhaseProfile_radians
+		if type(zernikeCoefficients) != type(None): 
+			print("zernike of interest: " + str(zernikeCoefficients[-1]))
+			factor = zernikeCoefficients[-1]
+			resized  = np.zeros_like(temp)
+			zoomed = cv2.resize(temp, None, fx=factor, fy=factor)
+			
+			h, w = temp.shape
+			zh, zw = zoomed.shape
+			
+			if factor == 1: 
+				resized = zoomed
+			elif factor<1:    # zero padded
+				resized[int((h-zh)/2):int(-(h-zh)/2), int((w-zw)/2):int(-(w-zw)/2)] = zoomed
+			else:               # clip out
+				resized = zoomed[int((zh-h)/2):int(-(zh-h)/2), int((zw-w)/2):int(-(zw-w)/2)]
 
+			# print("rescaled phases: " + str(resized.shape))
+			# plt.subplot(131), imshow(temp)
+			# plt.title('Original Image')
+			# plt.subplot(132), imshow(resized)
+			# plt.title('Resized Image')
+			# plt.show()
+			self.finalOutputPhaseProfile_radians = resized
+		
 		#Aperturing hologram!! Sepehr 9/8/2022
 		temp = self.finalOutputPhaseProfile_radians
 
@@ -1594,7 +1627,7 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 				y0 = temp.shape[1]//2
 				aperture_mask = np.ones_like(temp)
 				for x in xs:
-					aperture_mask[x, ys] *= (x0 - x)**2.0 + (y0-ys)**2.0 <= zernikeCoefficients[-1]**2.0#The -1st is the aperture size in pixels
+					aperture_mask[x, ys] *= (x0 - x)**2.0 + (y0-ys)**2.0 <= zernikeCoefficients[-2]**2.0#The -1st is the aperture size in pixels
 
 				temp*= aperture_mask
 				self.finalOutputPhaseProfile_radians = temp
