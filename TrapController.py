@@ -156,7 +156,7 @@ class RectangularLatticePicker(TargetPicker):
     def __init__(self):
         super().__init__()
 
-        self.oversamplingFactor = 10 #CHANGE THIS TO 10 TO GET 0.1 SPACING RESOLUTION
+        self.oversamplingFactor = 1 #CHANGE THIS TO 10 TO GET 0.1 SPACING RESOLUTION
 
         self.oversamplingLabel = QtWidgets.QLabel("Oversampling factor: %d" %self.oversamplingFactor)
 

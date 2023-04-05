@@ -1588,12 +1588,11 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 		if type(zernikeCoefficients) != type(None):
 			self.finalOutputPhaseProfile_radians = rotate(temp, zernikeCoefficients[-3])#The -2nd order to be the rotation
 
-		#Resizing the hologram here!! Sophie 3/16/2023 
+		#Zooming hologram here!! Sophie 3/16/2023 
 		temp = self.finalOutputPhaseProfile_radians
 		if type(zernikeCoefficients) != type(None): 
-			print("zernike of interest: " + str(zernikeCoefficients[-1]))
 			factor = zernikeCoefficients[-1]
-			resized  = np.zeros_like(temp)
+			resized = np.zeros_like(temp)
 			zoomed = cv2.resize(temp, None, fx=factor, fy=factor)
 			
 			h, w = temp.shape
@@ -1612,13 +1611,19 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 			# plt.subplot(132), imshow(resized)
 			# plt.title('Resized Image')
 			# plt.show()
+			#sqrt_num_squared = np.sqrt(np.sum(resized)**2.0)
+			# resized /= sqrt_num_squared
+			# resized = resized / np.max(resized) * 2*np.pi
+			temp-= np.min(temp)
+			temp += 2.0*np.pi # (To completely ensure non-negative phases)
+			temp = np.fmod(temp, 2.0*np.pi)
 			self.finalOutputPhaseProfile_radians = resized
 		
 		#Aperturing hologram!! Sepehr 9/8/2022
 		temp = self.finalOutputPhaseProfile_radians
-
+		
 		if type(zernikeCoefficients) != type(None):
-			if zernikeCoefficients[-1]>3:
+			if zernikeCoefficients[-2]>3:
 				print("APERTURED")
 				xs = np.arange(temp.shape[0])
 				ys = np.arange(temp.shape[1])

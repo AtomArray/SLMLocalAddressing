@@ -64,7 +64,8 @@ class LoadSavePanel(QtWidgets.QWidget):
 
         arrangementSettings, slmSettings = config
 
-        filename, ok = QtGui.QInputDialog.getText(self, "Save new configuration", "Enter filename:")
+        #filename, ok = QtGui.QInputDialog.getText(self, "Save new configuration", "Enter filename:")
+        filename, ok = QtWidgets.QInputDialog.getText(self, "Save new configuration", "Enter filename:")
         
         if not ok:
             return
