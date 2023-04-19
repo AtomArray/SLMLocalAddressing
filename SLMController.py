@@ -18,9 +18,6 @@ import zernike
 from skimage.transform import rotate, rescale, resize 
 from skimage.io import imread, imshow
 
-
-import pyfftw
-
 CURRENT_TRAP_ARRANGEMENT = "CurrentTrapArrangement.txt"
 
 X_CENTER = 130
@@ -1476,12 +1473,14 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 			return
 
 		geometryMain = QtWidgets.QDesktopWidget().screenGeometry(0)
-		geometrySLM = QtWidgets.QDesktopWidget().screenGeometry(1)
-		geometryLaptop = QtWidgets.QDesktopWidget().screenGeometry(2)
+		geometryScreen1 = QtWidgets.QDesktopWidget().screenGeometry(1)
+		geometryScreen2 = QtWidgets.QDesktopWidget().screenGeometry(2)
+		geometrySLM = QtWidgets.QDesktopWidget().screenGeometry(3)
 		numberOfScreens =  QtWidgets.QDesktopWidget().screenCount()
 		print("Main geometry:", geometryMain)
 		print("SLM Geometry:", geometrySLM)
-		print("Laptop Screen:", geometryLaptop)
+		print("Screen 1:", geometryScreen1)
+		print("Screen 2:", geometryScreen2)
 		print("Number of screens:", numberOfScreens)
 
 		self.dims = [1024, 1024]
@@ -1502,7 +1501,7 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 			self.width = geometrySLM.width()
 			self.height = geometrySLM.height()
 			print([geometryMain.width(), 0, self.width, self.height])
-			self.setGeometry(geometryMain.width(), 0, self.width, self.height)
+			self.setGeometry(geometryMain.width()+self.width, 0, self.width, self.height)
 		else: # Testing purposes, dipslay on main screen
 			self.width = geometryMain.width()
 			self.height = geometryMain.height()
@@ -1528,6 +1527,7 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 
 
 		self.show()
+
 
 	def loadHardwareCalibration(self):
 		# Hamamatsu provides a phase profile to correct for

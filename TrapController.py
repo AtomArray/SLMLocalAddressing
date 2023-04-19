@@ -792,7 +792,7 @@ def main():
 
     shouldRunNetworkServer = False
     shouldEnableSLMDisplay = True
-    shouldEnableThorcam = True
+    shouldEnableThorcam = False
 
     trapControllerInterface = TrapControllerInterface(app, shouldRunNetworkServer, shouldEnableSLMDisplay, shouldEnableThorcam)
     trapControllerInterface.show()
