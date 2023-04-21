@@ -488,6 +488,42 @@ class SLMController(QtWidgets.QWidget):
 
 		except Exception as e:
 			print("Error:", e)
+	
+	def runCalibrateWithTrap(self): 
+		try:
+			print("Running calibration with trapping SLM sequence...")
+			
+			blazeAmp = 0.2 #used to be 1
+			blazeZero = 0.05
+			cornerGratings = [
+				[blazeZero, blazeZero],
+				[blazeZero, blazeAmp],
+				[blazeAmp, blazeZero],
+				[blazeAmp, blazeAmp]
+			]
+
+			norm = (blazeAmp - blazeZero) * self.dims[0]
+			offset_from_origin = blazeZero * self.dims[0]
+			print(norm)
+
+			for i in range(len(cornerGratings)):
+				print()
+				print()
+				print("Setting corner", i)
+
+
+				# self.setBlazeGrating(cornerGratings[i][0], cornerGratings[i][1], apertureSize=150)
+				self.setBlazeGrating(cornerGratings[i][0], cornerGratings[i][1], apertureSize=10000)
+
+				self.app.processEvents()
+
+				time.sleep(3)
+
+				self.app.processEvents()
+				time.sleep(0.1)
+
+		except Exception as e:
+			print("Error:", e)
 
 	def savePhaseProfile(self):
 		np.savez("PhaseProfile.npz",
@@ -708,7 +744,6 @@ class SLMController(QtWidgets.QWidget):
 
 		self.display.setImage(self.phaseProfile, self.slmZernikeCoefficients.getCurrentCoefficients())
 
-
 	def calibrateThorCam(self):
 		self.thorCamInterface.prepareForCalibration()
 
@@ -761,7 +796,13 @@ class SLMController(QtWidgets.QWidget):
 		measuredCornerPositions = np.array(measuredCornerPositions)
 
 		self.thorCamInterface.doneWithCalibration(measuredCornerPositions, norm, offset_from_origin)
+	
+	def saveLocalCorners(string): 
+		print(string)
 
+	def saveTrapCorners(string): 
+		print(string)
+		
 	def calibrateSLMCorners(self):
 		self.thorCamInterface.pauseUpdateThread()
 

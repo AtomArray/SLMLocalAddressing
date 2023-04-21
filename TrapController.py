@@ -717,7 +717,7 @@ class TrapControllerInterface(QtWidgets.QWidget):
 
     def start_server(self):
         self.port = 2000
-        self.local_ip = "192.168.10.7"
+        self.local_ip = "192.168.10.68"
         self.network_thread = NetworkServer(self.local_ip, self.port)
 
         self.network_thread.data_received_signal.connect(self.process_remote_command)
@@ -732,6 +732,19 @@ class TrapControllerInterface(QtWidgets.QWidget):
 
         if "ZERNIKE" in string.upper():
             self.slmController.updateZernikeFromString(string)
+        if "LOCAL_CALIBRATION" in string.upper():
+            print("Reciveved local calibration command") 
+            self.slmController.runCalibrateWithTrap()
+        if "SET_BLAZE_GRATING" in string.upper(): 
+            print("Recieved local Blaze grating")
+            self.slmController.setCalibrationBlazeGrating()
+        if "LOCAL_CORNERS" in string.upper():
+            print("Recieved local corners")
+            self.slmController.saveLocalCorners()
+        if "TRAP_CORNERS" in string.upper(): 
+            self.slmController.saveTrapCorners()
+        else: 
+            print("Not a valid network command")
 
         # if "LA_CALIBRATION" in string.upper(): 
 
@@ -790,7 +803,7 @@ class TrapControllerInterface(QtWidgets.QWidget):
 def main():
     app = QtWidgets.QApplication(sys.argv)
 
-    shouldRunNetworkServer = False
+    shouldRunNetworkServer = True
     shouldEnableSLMDisplay = True
     shouldEnableThorcam = False
 
