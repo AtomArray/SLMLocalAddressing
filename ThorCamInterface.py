@@ -232,6 +232,7 @@ class ThorCamInterface(QtWidgets.QWidget):
 		self.thresholdMarker.setValue(self.settings.getThreshold())
 
 		im = self.thorcam.getImage()
+		#print(im)
 		# np.save("LastImage.npy", im)
 		if type(im) == type(None):
 			return []

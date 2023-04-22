@@ -494,8 +494,8 @@ class SLMController(QtWidgets.QWidget):
 			print("Setting calibration blaze grating")
 			i = int(string.split()[-1])
 			
-			blazeAmp = -0.2 #used to be 1 #used to be 0.2
-			blazeZero = -0.05
+			blazeAmp = -0.2 #used to be 1 #used to be 0.2 ## SET TO NEGATIVE ON 04/21/23 SOPHIE 
+			blazeZero = -0.05 # SET TO NEGATIVE ON 04/21/23 SOPHIE
 			cornerGratings = [
 				[blazeZero, blazeZero],
 				[blazeZero, blazeAmp],
@@ -511,9 +511,6 @@ class SLMController(QtWidgets.QWidget):
 			print()
 			print("Setting corner: " + str(i))
 
-
-			# self.setBlazeGrating(cornerGratings[i][0], cornerGratings[i][1], apertureSize=150)
-
 			self.setBlazeGrating(cornerGratings[i][0], cornerGratings[i][1], apertureSize=10000)
 
 			self.app.processEvents()
@@ -522,7 +519,7 @@ class SLMController(QtWidgets.QWidget):
 		except Exception as e:
 			print("Error:", e)
 		
-	def runCalibrateWithTrap(self): 
+	def runCalibrateWithTrap(self): ## HAS BEEN SUPERSCEDED BY SET CALIBRATION BLZE GRATING 
 		try:
 			print("Running calibration with trapping SLM sequence...")
 			
@@ -781,8 +778,8 @@ class SLMController(QtWidgets.QWidget):
 		self.thorCamInterface.prepareForCalibration()
 
 		# self.thorCamInterface.setFullAOI()
-		blazeAmp = -0.2 #used to be 1 #used to be 0.2 ## MUST USE NEGATIVE VALUES FOR WHEN THE AXES ARE FLIPPED IN DISPLAY SLM 
-		blazeZero = -0.05 #used to be -0.05
+		blazeAmp = 0.2 #used to be 1 #used to be 0.2 
+		blazeZero = 0.05
 		cornerGratings = [
 			[blazeZero, blazeZero],
 			[blazeZero, blazeAmp],
@@ -1738,6 +1735,7 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 
 		########## ADDED 04/21/23 SOPHIE FLIPPING THE ENTIRE PHASE PROFILE HORZ AND VERT 
 		self.finalOutputPhaseProfile_radians = np.flip(self.finalOutputPhaseProfile_radians, 0)
+		
 		self.finalOutputPhaseProfile_radians = np.flip(self.finalOutputPhaseProfile_radians, 1)
 
 		## Finally make into an 8bit 
