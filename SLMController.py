@@ -285,7 +285,7 @@ class SLMController(QtWidgets.QWidget):
 
 
 		self.dims = np.array([1024, 1024], dtype=np.int) # Width, height
-		self.oversampling_factor = 10 #idk what this would do, but for now set to 1, previously 10, 03-11-2022
+		self.oversampling_factor = 1 #idk what this would do, but for now set to 1, previously 10, 03-11-2022 #changed to 1 form 10 Sophie 04/21/23
 		self.target_arrangement_factorizes = False
 		# self.dims = [1024, 1024]
 		# self.dims = [256, 256]
@@ -489,6 +489,39 @@ class SLMController(QtWidgets.QWidget):
 		except Exception as e:
 			print("Error:", e)
 	
+	def setCalibrationBlazeGrating(self, string): 
+		try: 
+			print("Setting calibration blaze grating")
+			i = int(string.split()[-1])
+			
+			blazeAmp = -0.2 #used to be 1 #used to be 0.2
+			blazeZero = -0.05
+			cornerGratings = [
+				[blazeZero, blazeZero],
+				[blazeZero, blazeAmp],
+				[blazeAmp, blazeZero],
+				[blazeAmp, blazeAmp]
+			]
+
+			norm = (blazeAmp - blazeZero) * self.dims[0]
+			offset_from_origin = blazeZero * self.dims[0]
+			print(norm)
+
+			print()
+			print()
+			print("Setting corner: " + str(i))
+
+
+			# self.setBlazeGrating(cornerGratings[i][0], cornerGratings[i][1], apertureSize=150)
+
+			self.setBlazeGrating(cornerGratings[i][0], cornerGratings[i][1], apertureSize=10000)
+
+			self.app.processEvents()
+			time.sleep(0.1)
+
+		except Exception as e:
+			print("Error:", e)
+		
 	def runCalibrateWithTrap(self): 
 		try:
 			print("Running calibration with trapping SLM sequence...")
@@ -748,8 +781,8 @@ class SLMController(QtWidgets.QWidget):
 		self.thorCamInterface.prepareForCalibration()
 
 		# self.thorCamInterface.setFullAOI()
-		blazeAmp = 0.2 #used to be 1
-		blazeZero = 0.05
+		blazeAmp = -0.2 #used to be 1 #used to be 0.2 ## MUST USE NEGATIVE VALUES FOR WHEN THE AXES ARE FLIPPED IN DISPLAY SLM 
+		blazeZero = -0.05 #used to be -0.05
 		cornerGratings = [
 			[blazeZero, blazeZero],
 			[blazeZero, blazeAmp],
@@ -802,7 +835,7 @@ class SLMController(QtWidgets.QWidget):
 
 	def saveTrapCorners(string): 
 		print(string)
-		
+
 	def calibrateSLMCorners(self):
 		self.thorCamInterface.pauseUpdateThread()
 
@@ -1700,10 +1733,16 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 
 		# At this point, finalOutputPhaseProfile_radians contains the final phase profile to display to SLM, as a floating point in units of radians,
 		# and in the range [0, 2pi).
-		self.finalOutputPhaseProfile_8bit = (self.finalOutputPhaseProfile_radians * self.V_2pi / (2.0*np.pi)).astype(np.uint8)
+
+		self.finalOutputPhaseProfile_radians = self.finalOutputPhaseProfile_radians * self.V_2pi / (2.0*np.pi)
+
+		########## ADDED 04/21/23 SOPHIE FLIPPING THE ENTIRE PHASE PROFILE HORZ AND VERT 
+		self.finalOutputPhaseProfile_radians = np.flip(self.finalOutputPhaseProfile_radians, 0)
+		self.finalOutputPhaseProfile_radians = np.flip(self.finalOutputPhaseProfile_radians, 1)
+
+		## Finally make into an 8bit 
+		self.finalOutputPhaseProfile_8bit = (self.finalOutputPhaseProfile_radians).astype(np.uint8)
 		#print("Final output phase profile (8 bit):", self.finalOutputPhaseProfile_8bit)
-
-
 
 		# Convert data to a 'pixmap' for display.
 		im = QtGui.QImage(self.finalOutputPhaseProfile_8bit.data, self.width, self.height, self.width,
