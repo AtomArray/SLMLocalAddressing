@@ -196,7 +196,7 @@ class SLMZernikeCoefficients(QtWidgets.QTableWidget):
 		self.polynomial_indices = []
 
 		self.coefficients = np.array([zernike.ordered_polynomials[i][2] for i in range(len(zernike.ordered_polynomials))])
-		self.coefficients = np.append(self.coefficients, 0)#This is for adding the roation angle Sepehr 9/8/2022
+		self.coefficients = np.append(self.coefficients, 0)#This is for adding the rotation angle Sepehr 9/8/2022
 		self.coefficients = np.append(self.coefficients, 0)#This is for adding the Aperture mask
 		self.coefficients = np.append(self.coefficients, 1)#This is for zooming into the hologram
 
@@ -285,7 +285,7 @@ class SLMController(QtWidgets.QWidget):
 
 
 		self.dims = np.array([1024, 1024], dtype=np.int) # Width, height
-		self.oversampling_factor = 1 #idk what this would do, but for now set to 1, previously 10, 03-11-2022 #changed to 1 form 10 Sophie 04/21/23
+		self.oversampling_factor = 10 #idk what this would do, but for now set to 1, previously 10, 03-11-2022 #changed to 1 form 10 Sophie 04/21/23
 		self.target_arrangement_factorizes = False
 		# self.dims = [1024, 1024]
 		# self.dims = [256, 256]
@@ -1735,7 +1735,7 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 
 		########## ADDED 04/21/23 SOPHIE FLIPPING THE ENTIRE PHASE PROFILE HORZ AND VERT 
 		self.finalOutputPhaseProfile_radians = np.flip(self.finalOutputPhaseProfile_radians, 0)
-		
+
 		self.finalOutputPhaseProfile_radians = np.flip(self.finalOutputPhaseProfile_radians, 1)
 
 		## Finally make into an 8bit 
