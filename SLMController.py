@@ -285,7 +285,7 @@ class SLMController(QtWidgets.QWidget):
 
 
 		self.dims = np.array([1024, 1024], dtype=np.int) # Width, height
-		self.oversampling_factor = 10 #idk what this would do, but for now set to 1, previously 10, 03-11-2022 #changed to 1 form 10 Sophie 04/21/23
+		self.oversampling_factor = 1 #idk what this would do, but for now set to 1, previously 10, 03-11-2022 #changed to 1 form 10 Sophie 04/21/23
 		self.target_arrangement_factorizes = False
 		# self.dims = [1024, 1024]
 		# self.dims = [256, 256]
@@ -1456,7 +1456,7 @@ class SLMController(QtWidgets.QWidget):
 			# method = 0 # Gerchberg-Saxton algorithm
 			# method = 1 # Weighted Gerchberg-Saxton
 			method = 2 # Weighted Gerchberg-Saxton with phase fixing (Donggyu's idea)
-			phaseFixingCutoffIteration = 15
+			phaseFixingCutoffIteration = 30 #2023-04-25. changed from 15 to 30. Seems to allow for better convergence. Sepehr
 
 			for it in (1 + np.arange(self.numIter)):
 				fieldAtTargetPositions = self.outputAmplitudeProfile[targetMask]
@@ -1672,9 +1672,11 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 			if factor == 1: 
 				resized = zoomed
 			elif factor<1:    # zero padded
-				resized[int((h-zh)/2):int(-(h-zh)/2), int((w-zw)/2):int(-(w-zw)/2)] = zoomed
+				# resized[int((h-zh)/2):int(-(h-zh)/2), int((w-zw)/2):int(-(w-zw)/2)] = zoomed
+				resized = zoomed
 			else:               # clip out
-				resized = zoomed[int((zh-h)/2):int(-(zh-h)/2), int((zw-w)/2):int(-(zw-w)/2)]
+				# resized = zoomed[int((zh-h)/2):int(-(zh-h)/2), int((zw-w)/2):int(-(zw-w)/2)]
+				resized = zoomed[:h,:w]
 
 			# print("rescaled phases: " + str(resized.shape))
 			# plt.subplot(131), imshow(temp)

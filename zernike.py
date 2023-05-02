@@ -23,23 +23,41 @@ import matplotlib.pyplot as plt
 #         [(6, 0), "Secondary_Spherical",     1.36]
 #     ]
 
+# ordered_polynomials = [
+#         [(0, 0),  "Piston",                 0.0],
+#         [(1, -1), "Y-Tilt",                 0.0],
+#         [(1, 1),  "X-Tilt",                 0.0],
+#         [(2, -2), "Oblique_astigmatism",    20.5],
+#         [(2, 0), "Defocus",                 -40.0],
+#         [(2, 2), "Vertical_astigmatism",    27.3],
+#         [(3, -3), "Vertical_trefoil",       -5.0],
+#         [(3, -1), "Vertical_coma",          26.6],
+#         [(3, 1), "Horizontal_coma",         7.0],
+#         [(3, 3), "Oblique_trefoil",         6.0],
+#         [(4, -4), "Oblique_quadrafoil",     0.0],
+#         [(4, -2), "Horizontal_secondary_astigmatism",   -6.3],
+#         [(4, 0), "Primary_spherical",       12.4],
+#         [(4, 2), "Vertical_secondary_astigmatism",  3.5],
+#         [(4, 4), "Vertical_quadrafoil",     0.0],
+#         [(6, 0), "Secondary_Spherical",     1.36],
+#     ]
 ordered_polynomials = [
         [(0, 0),  "Piston",                 0.0],
         [(1, -1), "Y-Tilt",                 0.0],
         [(1, 1),  "X-Tilt",                 0.0],
-        [(2, -2), "Oblique_astigmatism",    20.5],
-        [(2, 0), "Defocus",                 -40.0],
-        [(2, 2), "Vertical_astigmatism",    27.3],
-        [(3, -3), "Vertical_trefoil",       -5.0],
-        [(3, -1), "Vertical_coma",          26.6],
-        [(3, 1), "Horizontal_coma",         7.0],
-        [(3, 3), "Oblique_trefoil",         6.0],
+        [(2, -2), "Oblique_astigmatism",    0.0],
+        [(2, 0), "Defocus",                 0.0],
+        [(2, 2), "Vertical_astigmatism",    0.0],
+        [(3, -3), "Vertical_trefoil",       0.0],
+        [(3, -1), "Vertical_coma",          0.0],
+        [(3, 1), "Horizontal_coma",         0.0],
+        [(3, 3), "Oblique_trefoil",         .0],
         [(4, -4), "Oblique_quadrafoil",     0.0],
-        [(4, -2), "Horizontal_secondary_astigmatism",   -6.3],
-        [(4, 0), "Primary_spherical",       12.4],
-        [(4, 2), "Vertical_secondary_astigmatism",  3.5],
+        [(4, -2), "Horizontal_secondary_astigmatism",   0.0],
+        [(4, 0), "Primary_spherical",       0.0],
+        [(4, 2), "Vertical_secondary_astigmatism", 0.0],
         [(4, 4), "Vertical_quadrafoil",     0.0],
-        [(6, 0), "Secondary_Spherical",     1.36],
+        [(6, 0), "Secondary_Spherical",     0.0],
     ]
 
 # See: http://mathworld.wolfram.com/ZernikePolynomial.html
