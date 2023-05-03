@@ -322,7 +322,7 @@ class ThorCamInterface(QtWidgets.QWidget):
 
 
 	def identifyTraps(self, image, num_traps=1000, threshold=80, blockade_size=10,
-						ignoreZeroOrder=False, zeroOrderBlockade = 20, useGaussian=False):
+						ignoreZeroOrder=False, zeroOrderBlockade = 20, ignoreHigherOrder = False, higherOrderBlockade = 500, useGaussian=False):
 
 		# image = np.array(im, dtype=np.int32)
 		# num_traps = 1
@@ -363,6 +363,13 @@ class ThorCamInterface(QtWidgets.QWidget):
 			y1 = int(min(image.shape[1] - 1, self.origin[1] + zeroOrderBlockade))
 
 			availablePositions[x0:x1, y0:y1] = 0
+
+		## ADDED 04/22/23
+		if ignoreHigherOrder: 
+			xlim = int(min(image.shape[0]-1, image.shape[0] - higherOrderBlockade))
+			ylim = int(min(image.shape[1]-1, image.shape[1] - higherOrderBlockade))
+
+			availablePositions[:xlim, :ylim] = 0
 
 		candidateTraps = []
 		for i in sortedIndices:

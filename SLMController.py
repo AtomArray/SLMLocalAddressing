@@ -493,9 +493,9 @@ class SLMController(QtWidgets.QWidget):
 		try: 
 			print("Setting calibration blaze grating")
 			i = int(string.split()[-1])
-			
-			blazeAmp = -0.2 #used to be 1 #used to be 0.2 ## SET TO NEGATIVE ON 04/21/23 SOPHIE 
-			blazeZero = -0.05 # SET TO NEGATIVE ON 04/21/23 SOPHIE
+
+			blazeAmp = 0.2 #used to be 1 #used to be 0.2 
+			blazeZero = 0.05
 			cornerGratings = [
 				[blazeZero, blazeZero],
 				[blazeZero, blazeAmp],
@@ -519,42 +519,6 @@ class SLMController(QtWidgets.QWidget):
 		except Exception as e:
 			print("Error:", e)
 		
-	def runCalibrateWithTrap(self): ## HAS BEEN SUPERSCEDED BY SET CALIBRATION BLZE GRATING 
-		try:
-			print("Running calibration with trapping SLM sequence...")
-			
-			blazeAmp = 0.2 #used to be 1
-			blazeZero = 0.05
-			cornerGratings = [
-				[blazeZero, blazeZero],
-				[blazeZero, blazeAmp],
-				[blazeAmp, blazeZero],
-				[blazeAmp, blazeAmp]
-			]
-
-			norm = (blazeAmp - blazeZero) * self.dims[0]
-			offset_from_origin = blazeZero * self.dims[0]
-			print(norm)
-
-			for i in range(len(cornerGratings)):
-				print()
-				print()
-				print("Setting corner", i)
-
-
-				# self.setBlazeGrating(cornerGratings[i][0], cornerGratings[i][1], apertureSize=150)
-				self.setBlazeGrating(cornerGratings[i][0], cornerGratings[i][1], apertureSize=10000)
-
-				self.app.processEvents()
-
-				time.sleep(3)
-
-				self.app.processEvents()
-				time.sleep(0.1)
-
-		except Exception as e:
-			print("Error:", e)
-
 	def savePhaseProfile(self):
 		np.savez("PhaseProfile.npz",
 			phaseProfile=self.phaseProfile,
@@ -875,92 +839,92 @@ class SLMController(QtWidgets.QWidget):
 
 	#trapSLMFourCorners = 
 	# We want to adjust the local addressing SLM such that it matches the positions of the four corners 
-	def rotation_mat(self, theta): 
-		return np.array([[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]])
+	# def rotation_mat(self, theta): 
+	# 	return np.array([[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]])
 	
-	def rotate(self, array, theta): 
-		array_rot = np.zeros(np.shape(array))
-		for i in range(len(array)): 
-			array_rot[i] = np.matmul(self.rotation_mat(theta), array[i])
-		return array_rot
+	# def rotate(self, array, theta): 
+	# 	array_rot = np.zeros(np.shape(array))
+	# 	for i in range(len(array)): 
+	# 		array_rot[i] = np.matmul(self.rotation_mat(theta), array[i])
+	# 	return array_rot
 		
-	def to_origin_frame(self, array): 
-			origin =  np.reshape(np.array([array[0][0], array[0][1]]*4),(4,2))
-			return array - origin
+	# def to_origin_frame(self, array): 
+	# 		origin =  np.reshape(np.array([array[0][0], array[0][1]]*4),(4,2))
+	# 		return array - origin
 
-	def generate_trapSLM_corners(self): 
-		test_array = [np.array([544.99621485, 321.99843666]), np.array([537.00379237, 128.00004969]), np.array([735.00273043, 316.00252588]), np.array([727.99998694, 121.99667972])]
-		test_array = np.ones(np.shape(test_array))*20+test_array
-		return test_array
+	# def generate_trapSLM_corners(self): 
+	# 	test_array = [np.array([544.99621485, 321.99843666]), np.array([537.00379237, 128.00004969]), np.array([735.00273043, 316.00252588]), np.array([727.99998694, 121.99667972])]
+	# 	test_array = np.ones(np.shape(test_array))*20+test_array
+	# 	return test_array
 	
-	def get_d_from_coords(self, corners, point):
+	# def get_d_from_coords(self, corners, point):
 		xDis = corners[0][0]-corners[point][0]
 		yDis = corners[0][1]-corners[point][1]
 		d = np.sqrt(xDis**2 + yDis**2)
 		return d
 	
 	
-	def calibrateLA(self): 
-		self.calibrateThorCam()
-		self.calibrateSLMCorners()
-		la_corners = self.cameraCornerPositions
-		la_corners = self.to_origin_frame(la_corners)
-		trap_corners = self.generate_trapSLM_corners()
-		trap_corners = self.to_origin_frame(trap_corners)
-		trap_corners = trap_corners * np.reshape(np.array([1/3, 1/2]*4), (4,2)) 
-		trap_corners = self.rotate(trap_corners, np.pi/6)
-		#trap_corners -= self.origin(trap_corners)
+	# def calibrateLA(self): 
+	# 	self.calibrateThorCam()
+	# 	self.calibrateSLMCorners()
+	# 	la_corners = self.cameraCornerPositions
+	# 	la_corners = self.to_origin_frame(la_corners)
+	# 	trap_corners = self.generate_trapSLM_corners()
+	# 	trap_corners = self.to_origin_frame(trap_corners)
+	# 	trap_corners = trap_corners * np.reshape(np.array([1/3, 1/2]*4), (4,2)) 
+	# 	trap_corners = self.rotate(trap_corners, np.pi/6)
+	# 	#trap_corners -= self.origin(trap_corners)
 
-		delta_x = trap_corners[0][0] - la_corners[0][0]
-		delta_y = trap_corners[0][1] - la_corners[0][1]
+	# 	delta_x = trap_corners[0][0] - la_corners[0][0]
+	# 	delta_y = trap_corners[0][1] - la_corners[0][1]
 	
-		offset = np.reshape(np.array([delta_x, delta_y]*4),(4,2))
+	# 	offset = np.reshape(np.array([delta_x, delta_y]*4),(4,2))
 		
-		la_corners_offset = la_corners + offset
+	# 	la_corners_offset = la_corners + offset
 
-		dtrapx = self.get_d_from_coords(trap_corners, 2)
-		dtrapy = self.get_d_from_coords(trap_corners, 1)
-		dlax = self.get_d_from_coords(la_corners_offset, 2)
-		dlay = self.get_d_from_coords(la_corners_offset, 1) 
-		mag = np.reshape(np.array([dtrapx / dlax, dtrapy / dlay]*4), (4,2)) 
+	# 	dtrapx = self.get_d_from_coords(trap_corners, 2)
+	# 	dtrapy = self.get_d_from_coords(trap_corners, 1)
+	# 	dlax = self.get_d_from_coords(la_corners_offset, 2)
+	# 	dlay = self.get_d_from_coords(la_corners_offset, 1) 
+	# 	mag = np.reshape(np.array([dtrapx / dlax, dtrapy / dlay]*4), (4,2)) 
 		
-		la_corners_offset_mag = (la_corners_offset)*mag
+	# 	la_corners_offset_mag = (la_corners_offset)*mag
 	
-		a = trap_corners[1]/np.linalg.norm(trap_corners[1])
-		b = la_corners_offset_mag[1]/np.linalg.norm(la_corners_offset_mag[1])
-		theta = np.arccos(np.dot(a,b))
+	# 	a = trap_corners[1]/np.linalg.norm(trap_corners[1])
+	# 	b = la_corners_offset_mag[1]/np.linalg.norm(la_corners_offset_mag[1])
+	# 	theta = np.arccos(np.dot(a,b))
 
-		la_corners_offset_mag_rot = self.rotate(la_corners_offset_mag, theta)
+	# 	la_corners_offset_mag_rot = self.rotate(la_corners_offset_mag, theta)
 
-		for i in range(len(la_corners)): 
-			x = la_corners[i][0]
-			y = la_corners[i][1]
-			plt.scatter(x, y, color= "g", alpha= 0.5)
-			plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
-		for i in range(len(trap_corners)): 
-			x = trap_corners[i][0]
-			y = trap_corners[i][1]
-			plt.scatter(x, y, color= "r", alpha= 0.5 )
-			plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
-		for i in range(len(la_corners_offset)): 
-			x = la_corners_offset[i][0]
-			y = la_corners_offset[i][1]
-			plt.scatter(x, y, color= "b", alpha=0.5)
-			plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
-		for i in range(len(la_corners_offset_mag)): 
-			x = la_corners_offset_mag[i][0]
-			y = la_corners_offset_mag[i][1]
-			plt.scatter(x, y, color= "y",  alpha= 0.5)
-			plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
-		for i in range(len(la_corners_offset_mag_rot)): 
-			x = la_corners_offset_mag_rot[i][0]
-			y = la_corners_offset_mag_rot[i][1]
-			plt.scatter(x, y, color= "k",  alpha= 0.5)
-			plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
-		plt.axis('scaled')
-		plt.show() 
+	# 	for i in range(len(la_corners)): 
+	# 		x = la_corners[i][0]
+	# 		y = la_corners[i][1]
+	# 		plt.scatter(x, y, color= "g", alpha= 0.5)
+	# 		plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
+	# 	for i in range(len(trap_corners)): 
+	# 		x = trap_corners[i][0]
+	# 		y = trap_corners[i][1]
+	# 		plt.scatter(x, y, color= "r", alpha= 0.5 )
+	# 		plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
+	# 	for i in range(len(la_corners_offset)): 
+	# 		x = la_corners_offset[i][0]
+	# 		y = la_corners_offset[i][1]
+	# 		plt.scatter(x, y, color= "b", alpha=0.5)
+	# 		plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
+	# 	for i in range(len(la_corners_offset_mag)): 
+	# 		x = la_corners_offset_mag[i][0]
+	# 		y = la_corners_offset_mag[i][1]
+	# 		plt.scatter(x, y, color= "y",  alpha= 0.5)
+	# 		plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
+	# 	for i in range(len(la_corners_offset_mag_rot)): 
+	# 		x = la_corners_offset_mag_rot[i][0]
+	# 		y = la_corners_offset_mag_rot[i][1]
+	# 		plt.scatter(x, y, color= "k",  alpha= 0.5)
+	# 		plt.text(x * (1 + 0.01), y * (1 + 0.01) , i, fontsize=12)
+	# 	plt.axis('scaled')
+	# 	plt.show() 
 
-		return [offset, mag, theta]
+	# 	return [offset, mag, theta]
 	
 	# We want to find AOD frequencies that match the positions of the four corners
 	def calibrateAOD(self):
