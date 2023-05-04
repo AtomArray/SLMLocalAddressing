@@ -200,7 +200,9 @@ class SLMZernikeCoefficients(QtWidgets.QTableWidget):
 		self.coefficients = np.append(self.coefficients, 0)#This is for adding the Aperture mask
 		self.coefficients = np.append(self.coefficients, 1)#This is for zooming into the hologram
 
-
+		self.calibration_coefficients = np.array([zernike.calibration_polynomials[i][2] for i in range(len(zernike.calibration_polynomials))])
+		
+		self.offset_coefficients = np.array([zernike.offset_polynomials[i][2] for i in range(len(zernike.offset_polynomials))])
 
 		for i in range(len(zernike.ordered_polynomials)):
 			self.polynomial_labels.append("%s, %s" %(zernike.ordered_polynomials[i][0], zernike.ordered_polynomials[i][1]))
@@ -261,6 +263,10 @@ class SLMZernikeCoefficients(QtWidgets.QTableWidget):
 
 	def getCurrentCoefficients(self):
 		return self.coefficients
+	
+	def getCalibrationCoefficients(self, index): 
+		coeffs = [self.calibration_coefficients, self.offset_coefficients]
+		return coeffs[index]
 
 	def getPolynomialLabels(self):
 		return self.polynomial_labels ##ADDED 10/13/2022
@@ -349,9 +355,12 @@ class SLMController(QtWidgets.QWidget):
 
 		self.calibrateSLMCornersButton = QtWidgets.QPushButton("Calibrate SLM Corners")
 		self.calibrateSLMCornersButton.clicked.connect(self.calibrateSLMCorners)
-
+		
 		self.calibrateAODButton = QtWidgets.QPushButton("Calibrate AOD")
 		self.calibrateAODButton.clicked.connect(self.calibrateAOD)
+
+		self.feedbackOnFileButton = QtWidgets.QPushButton("Auto-align")
+		self.feedbackOnFileButton.clicked.connect(self.autoAlign)
 
 		self.slmSettings = SLMSettings()
 		self.slmZernikeCoefficients = SLMZernikeCoefficients(self.updateSLMDisplay)
@@ -520,7 +529,20 @@ class SLMController(QtWidgets.QWidget):
 
 		except Exception as e:
 			print("Error:", e)
-		
+
+	def setCalibrationSingleSpot(self, string): 
+		try: 
+			i = int(string.split()[-1])
+			print("Setting calibration single spot:" + str(i))
+			data = np.load("SingleSpotCalibration.npz")
+			loadedPhaseProfile = data["phaseProfile"]
+
+			self.setPhaseProfile(loadedPhaseProfile)
+			self.display.setImage(self.phaseProfile, self.slmZernikeCoefficients.getCalibrationCoefficients(i))
+			
+		except Exception as e: 
+			print("Error:", e)
+
 	def savePhaseProfile(self):
 		np.savez("PhaseProfile.npz",
 			phaseProfile=self.phaseProfile,
@@ -597,7 +619,12 @@ class SLMController(QtWidgets.QWidget):
 
 		self.thorCamInterface.resumeUpdateThread()
 
+	def autoAlign(self): 
+		self.thorCamInterface.pauseUpdateThread()
 
+		# rotation alignment 
+		# zoom alignment 
+		# translation alignment 
 
 	def feedbackOnCamera(self):
 		self.thorCamInterface.pauseUpdateThread()
@@ -793,41 +820,41 @@ class SLMController(QtWidgets.QWidget):
 
 		self.thorCamInterface.doneWithCalibration(measuredCornerPositions, norm, offset_from_origin)
 	
+	def arrayFromString(self, string, array): 
+		coordinates = string.split(",")
+		for i in range(len(coordinates)-1): 
+			coordinates_split = coordinates[i].split(" ")
+			array[i][0] = float(coordinates_split[0])
+			array[i][1] = float(coordinates_split[1]) 
+		return array 
+
 	def saveLocalCorners(self, string): 
 		local_corners_array = np.zeros((4,2))
 		trap_corners_array = np.zeros((4,2))
+		translation_array = np.zeros((2,2))
 
-		local_corners_string = string.split("_")[1]
-		trap_corners_string = string.split("_")[2]
-
+		local_corners_string, trap_corners_string, translation_string = string.split("_")
 		local_coordinates = local_corners_string.split(",")
 		trap_coordinates = trap_corners_string.split(",")
-		
-		for i in range(len(local_coordinates)-1): 
-			coordinates_split = local_coordinates[i].split(" ")
-			local_corners_array[i][0] = float(coordinates_split[0])
-			local_corners_array[i][1] = float(coordinates_split[1]) 
+		translation_coordinates = translation_string.split(",")
 
-		for i in range(len(trap_coordinates)-1): 
-			coordinates_split = trap_coordinates[i].split(" ")
-			trap_corners_array[i][0] = float(coordinates_split[0])
-			trap_corners_array[i][1] = float(coordinates_split[1]) 
+		local_corners_array = self.arrayFromString(local_corners_string, local_corners_array)
+		trap_corners_array = self.arrayFromString(trap_corners_string, trap_corners_array)
+		translation_array = self.arrayFromString(translation_string, translation_array)
 
 		norm = (self.localBlazeAmp - self.localBlazeZero) * self.dims[0]
 		offset_from_origin = self.localBlazeZero * self.dims[0]
-		
 
 		print("local coordinates")
 		print(local_corners_array)
 		print("trap coordinates ")
 		print(trap_corners_array)
+		print("translation_coordinates")
+		print(translation_array)
 
-		self.thorCamInterface.doneWithCalibration(local_corners_array, trap_corners_array, norm,offset_from_origin)
-
-
-	def saveTrapCorners(string): 
-		print(string)
-
+		self.thorCamInterface.doneWithCalibration(local_corners_array, trap_corners_array, translation_array, norm,offset_from_origin, 1000)
+		### Hardcoded the calibration zernike coefficient, change this 
+	
 	def calibrateSLMCorners(self):
 		self.thorCamInterface.pauseUpdateThread()
 

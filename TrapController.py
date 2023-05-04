@@ -733,8 +733,11 @@ class TrapControllerInterface(QtWidgets.QWidget):
         if "SET_BLAZE_GRATING" in string.upper(): 
             print("Recieved local Blaze grating")
             self.slmController.setCalibrationBlazeGrating(string)
+        if "SET_SINGLE_SPOT" in string.upper(): 
+            print("Recieved cammand for translation calibration")
+            self.slmController.setCalibrationSingleSpot(string)
         if "CORNERSFROMBEAST" in string.upper():
-            print("Recieveing corner coordinates")
+            print("Recieveing calibration results")
             self.slmController.saveLocalCorners(string)
         # elif not string.upper().startswith("ZERNIKE"): #if this isn't just a zernike polynomial command
         #     target_config = string.strip().split("\n")[0].split(" ")[0]
@@ -743,10 +746,6 @@ class TrapControllerInterface(QtWidgets.QWidget):
         #     self.loadSavePanel.load()
         else: 
             print("Not a valid network command")
-
-        # if "LA_CALIBRATION" in string.upper(): 
-
-
 
     def getCurrentConfiguration(self):
         # try:

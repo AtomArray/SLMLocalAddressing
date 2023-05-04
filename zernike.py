@@ -60,6 +60,43 @@ ordered_polynomials = [
         [(6, 0), "Secondary_Spherical",     0.0],
     ]
 
+calibration_polynomials = [
+        [(0, 0),  "Piston",                 0.0],
+        [(1, -1), "Y-Tilt",                 0.0],
+        [(1, 1),  "X-Tilt",                 0.0],
+        [(2, -2), "Oblique_astigmatism",    0.0],
+        [(2, 0), "Defocus",                 0.0],
+        [(2, 2), "Vertical_astigmatism",    0.0],
+        [(3, -3), "Vertical_trefoil",       0.0],
+        [(3, -1), "Vertical_coma",          0.0],
+        [(3, 1), "Horizontal_coma",         0.0],
+        [(3, 3), "Oblique_trefoil",         .0],
+        [(4, -4), "Oblique_quadrafoil",     0.0],
+        [(4, -2), "Horizontal_secondary_astigmatism",   0.0],
+        [(4, 0), "Primary_spherical",       0.0],
+        [(4, 2), "Vertical_secondary_astigmatism", 0.0],
+        [(4, 4), "Vertical_quadrafoil",     0.0],
+        [(6, 0), "Secondary_Spherical",     0.0],
+    ]
+
+offset_polynomials = [
+        [(0, 0),  "Piston",                 0.0],
+        [(1, -1), "Y-Tilt",                 0.0],
+        [(1, 1),  "X-Tilt",                 1000],
+        [(2, -2), "Oblique_astigmatism",    0.0],
+        [(2, 0), "Defocus",                 0.0],
+        [(2, 2), "Vertical_astigmatism",    0.0],
+        [(3, -3), "Vertical_trefoil",       0.0],
+        [(3, -1), "Vertical_coma",          0.0],
+        [(3, 1), "Horizontal_coma",         0.0],
+        [(3, 3), "Oblique_trefoil",         .0],
+        [(4, -4), "Oblique_quadrafoil",     0.0],
+        [(4, -2), "Horizontal_secondary_astigmatism",   0.0],
+        [(4, 0), "Primary_spherical",       0.0],
+        [(4, 2), "Vertical_secondary_astigmatism", 0.0],
+        [(4, 4), "Vertical_quadrafoil",     0.0],
+        [(6, 0), "Secondary_Spherical",     0.0],
+    ]
 # See: http://mathworld.wolfram.com/ZernikePolynomial.html
 # and https://en.wikipedia.org/wiki/Zernike_polynomials
 def radial_polynomial(rho, m, n):
@@ -106,9 +143,10 @@ def main():
     for i in range(5):
         n, m = ordered_polynomials[i][0]
         label = ordered_polynomials[i][1]
+        coefficients = ordered_polynomials[i][2]
 
         phase_profile = zernike(rhos, phis, m, n) # Phase profile calculated over entire unit square
-
+        phase_profile *= 2*np.pi*(0.001 * coefficients)
         # Mask phase profile outside of unit disk? This is generally not good unless we aperture the SLM phase mask.
         # phase_profile[rhos >= 1.0] = 0.0
 

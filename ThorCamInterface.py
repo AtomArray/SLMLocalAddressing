@@ -19,7 +19,7 @@ from ImagingSourceCam import ImagingSourceCam
 UPDATE_THREAD_TIME = 0.5
 LAST_LOCAL_CALIBRATION_FILENAME = "LastLocalCalibration.npz"
 LAST_TRAP_CALIBRATION_FILENAME = "LastTrapCalibration.npz"
-
+LAST_TRANSLATION_CALIBRATION_FILENAME = "LastTranslationCalibration.npz"
 
 # This class encodes a table view with several
 # user programmable settings for how the SLM operates.
@@ -207,7 +207,7 @@ class ThorCamInterface(QtWidgets.QWidget):
 			print(error_message, e)
 
 
-	def doneWithCalibration(self, localCornerPositions, trapCornerPositions, norm, offset_from_origin):
+	def doneWithCalibration(self, localCornerPositions, trapCornerPositions, translationPositions, norm, offset_from_origin, zernikeCoefficient):
 		self.resumeUpdateThread()
 
 		self.localOrigin, self.localxMarker, self.localyMarker, self.localCorner = np.array(localCornerPositions)
@@ -233,6 +233,13 @@ class ThorCamInterface(QtWidgets.QWidget):
 			xMarker=self.trapxMarker,
 			yMarker=self.trapyMarker,
 			corner=self.trapCorner)
+		
+		self.centerZero, self.centerTranslated = np.array(translationPositions)
+
+		np.savez(LAST_TRANSLATION_CALIBRATION_FILENAME,
+			centerZero=self.centerZero,
+			centerTranslated=self.centerTranslated,
+			zernikeCoefficient=zernikeCoefficient) 
 
 	def convertSLMCoordsToCameraCoords(self, y, x):
 		pos = (self.origin + self.eX * x + self.eY * y).astype(np.int32)
