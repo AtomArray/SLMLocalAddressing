@@ -187,7 +187,7 @@ class SLMSettings(QtWidgets.QTableWidget):
 				self.item(i, 1).setText("%s" %str(settings[all_keys[i]]))
 
 
-# This class encodes a table view with zernike coefficients. They are in units of milli-waves.
+# This class encodes a table view with coefficients. They are in units of milli-waves.
 class SLMZernikeCoefficients(QtWidgets.QTableWidget):
 	def __init__(self, updateCallback):
 		super().__init__()
@@ -399,6 +399,8 @@ class SLMController(QtWidgets.QWidget):
 
 		self.layout.addWidget(self.thorCamInterface, 5, 0, 1, 3)
 
+		self.localBlazeAmp = 0.2
+		self.localBlazeZero = 0.05
 
 		for i in range(3):
 			#self.layout.setColumnStretch(i, 1)
@@ -494,8 +496,8 @@ class SLMController(QtWidgets.QWidget):
 			print("Setting calibration blaze grating")
 			i = int(string.split()[-1])
 
-			blazeAmp = 0.2 #used to be 1 #used to be 0.2 
-			blazeZero = 0.05
+			blazeAmp = self.localBlazeAmp #used to be 1 #used to be 0.2 
+			blazeZero = self.localBlazeZero
 			cornerGratings = [
 				[blazeZero, blazeZero],
 				[blazeZero, blazeAmp],
@@ -791,8 +793,37 @@ class SLMController(QtWidgets.QWidget):
 
 		self.thorCamInterface.doneWithCalibration(measuredCornerPositions, norm, offset_from_origin)
 	
-	def saveLocalCorners(string): 
-		print(string)
+	def saveLocalCorners(self, string): 
+		local_corners_array = np.zeros((4,2))
+		trap_corners_array = np.zeros((4,2))
+
+		local_corners_string = string.split("_")[1]
+		trap_corners_string = string.split("_")[2]
+
+		local_coordinates = local_corners_string.split(",")
+		trap_coordinates = trap_corners_string.split(",")
+		
+		for i in range(len(local_coordinates)-1): 
+			coordinates_split = local_coordinates[i].split(" ")
+			local_corners_array[i][0] = float(coordinates_split[0])
+			local_corners_array[i][1] = float(coordinates_split[1]) 
+
+		for i in range(len(trap_coordinates)-1): 
+			coordinates_split = trap_coordinates[i].split(" ")
+			trap_corners_array[i][0] = float(coordinates_split[0])
+			trap_corners_array[i][1] = float(coordinates_split[1]) 
+
+		norm = (self.localBlazeAmp - self.localBlazeZero) * self.dims[0]
+		offset_from_origin = self.localBlazeZero * self.dims[0]
+		
+
+		print("local coordinates")
+		print(local_corners_array)
+		print("trap coordinates ")
+		print(trap_corners_array)
+
+		self.thorCamInterface.doneWithCalibration(local_corners_array, trap_corners_array, norm,offset_from_origin)
+
 
 	def saveTrapCorners(string): 
 		print(string)

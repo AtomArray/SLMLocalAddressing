@@ -17,7 +17,9 @@ from ThorCam import ThorCam
 from ImagingSourceCam import ImagingSourceCam
 
 UPDATE_THREAD_TIME = 0.5
-LAST_CALIBRATION_FILENAME = "LastThorCamCalibration.npz"
+LAST_LOCAL_CALIBRATION_FILENAME = "LastLocalCalibration.npz"
+LAST_TRAP_CALIBRATION_FILENAME = "LastTrapCalibration.npz"
+
 
 # This class encodes a table view with several
 # user programmable settings for how the SLM operates.
@@ -142,13 +144,21 @@ class ThorCamInterface(QtWidgets.QWidget):
 		self.layout.addWidget(self.numIdentifiedTrapsLabel, 1, 1)
 
 
-		self.origin = [0, 0]
-		self.xMarker = [0, 0]
-		self.yMarker = [0, 0]
-		self.corner = [0, 0]
-		self.eX = np.array([0, 1])
-		self.eY = np.array([1, 0])
-		self.loadPreviousCalibration()
+		self.trapOrigin = [0, 0]
+		self.trapxMarker = [0, 0]
+		self.trapyMarker = [0, 0]
+		self.trapCorner = [0, 0]
+		self.trapeX = np.array([0, 1])
+		self.trapeY = np.array([1, 0])
+		self.loadPreviousCalibration("trap")
+
+		self.localOrigin = [0, 0]
+		self.localxMarker = [0, 0]
+		self.localyMarker = [0, 0]
+		self.localCorner = [0, 0]
+		self.localeX = np.array([0, 1])
+		self.localeY = np.array([1, 0])
+		self.loadPreviousCalibration("local")
 
 		self.slmCoordinates = []
 
@@ -170,39 +180,59 @@ class ThorCamInterface(QtWidgets.QWidget):
 		self.pauseUpdateThread()
 
 
-	def loadPreviousCalibration(self):
+	def loadPreviousCalibration(self, type):
 		try:
-			print("Loading last ThorCam calibration...")
-			lastCalibration = np.load(LAST_CALIBRATION_FILENAME)
+			message = "Loading last" + type + "ThorCam calibration..."
+			print(message)
+			if type == "local": 
+				lastCalibration = np.load(LAST_LOCAL_CALIBRATION_FILENAME)
 
-			self.eX = lastCalibration["eX"]
-			self.eY = lastCalibration["eY"]
-			self.origin = lastCalibration["origin"]
-			self.xMarker = lastCalibration["xMarker"]
-			self.yMarker = lastCalibration["yMarker"]
-			self.corner = lastCalibration["corner"]
+				self.localeX = lastCalibration["eX"]
+				self.localeY = lastCalibration["eY"]
+				self.localOrigin = lastCalibration["origin"]
+				self.localxMarker = lastCalibration["xMarker"]
+				self.localyMarker = lastCalibration["yMarker"]
+				self.localCorner = lastCalibration["corner"]
+			if type == "trap": 
+				lastCalibration = np.load(LAST_TRAP_CALIBRATION_FILENAME)
+
+				self.trapeX = lastCalibration["eX"]
+				self.trapeY = lastCalibration["eY"]
+				self.trapOrigin = lastCalibration["origin"]
+				self.trapxMarker = lastCalibration["xMarker"]
+				self.trapyMarker = lastCalibration["yMarker"]
+				self.trapCorner = lastCalibration["corner"]
 		except Exception as e:
-			print("Unable to load ThorCam calibration:", e)
+			error_message = "Unable to load" + type + "ThorCam calibration:"
+			print(error_message, e)
 
 
-	def doneWithCalibration(self, cornerPositions, norm, offset_from_origin):
+	def doneWithCalibration(self, localCornerPositions, trapCornerPositions, norm, offset_from_origin):
 		self.resumeUpdateThread()
 
-		self.origin, self.xMarker, self.yMarker, self.corner = np.array(cornerPositions)
+		self.localOrigin, self.localxMarker, self.localyMarker, self.localCorner = np.array(localCornerPositions)
 		
+		self.localeX = (self.localxMarker - self.localOrigin) / norm # Basis vectors for SLM coordinates
+		
+		self.elocalY = (self.localyMarker - self.localOrigin) / norm
+		
+		self.localOrigin -= self.localeX * offset_from_origin + self.localeY * offset_from_origin
+		
+		np.savez(LAST_LOCAL_CALIBRATION_FILENAME,
+			eX=self.localeX,
+			eY=self.localeY,
+			origin=self.localOrigin,
+			xMarker=self.localxMarker,
+			yMarker=self.localyMarker,
+			corner=self.localCorner)
 
-		self.eX = (self.xMarker - self.origin) / norm # Basis vectors for SLM coordinates
-		self.eY = (self.yMarker - self.origin) / norm
-
-		self.origin -= self.eX * offset_from_origin + self.eY * offset_from_origin
-
-		np.savez(LAST_CALIBRATION_FILENAME,
-			eX=self.eX,
-			eY=self.eY,
-			origin=self.origin,
-			xMarker=self.xMarker,
-			yMarker=self.yMarker,
-			corner=self.corner)
+		self.trapOrigin, self.trapxMarker, self.trapyMarker, self.trapCorner = np.array(trapCornerPositions)
+		
+		np.savez(LAST_TRAP_CALIBRATION_FILENAME,
+			origin=self.trapOrigin,
+			xMarker=self.trapxMarker,
+			yMarker=self.trapyMarker,
+			corner=self.trapCorner)
 
 	def convertSLMCoordsToCameraCoords(self, y, x):
 		pos = (self.origin + self.eX * x + self.eY * y).astype(np.int32)

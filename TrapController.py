@@ -724,6 +724,7 @@ class TrapControllerInterface(QtWidgets.QWidget):
         self.network_thread.start()
 
     def process_remote_command(self, string):
+        print(string)
         if "ZERNIKE" in string.upper():
             self.slmController.updateZernikeFromString(string)
         if "LOCAL_CALIBRATION" in string.upper():
@@ -732,11 +733,9 @@ class TrapControllerInterface(QtWidgets.QWidget):
         if "SET_BLAZE_GRATING" in string.upper(): 
             print("Recieved local Blaze grating")
             self.slmController.setCalibrationBlazeGrating(string)
-        if "LOCAL_CORNERS" in string.upper():
-            print("Recieved local corners")
-            self.slmController.saveLocalCorners()
-        if "TRAP_CORNERS" in string.upper(): 
-            self.slmController.saveTrapCorners()
+        if "CORNERSFROMBEAST" in string.upper():
+            print("Recieveing corner coordinates")
+            self.slmController.saveLocalCorners(string)
         # elif not string.upper().startswith("ZERNIKE"): #if this isn't just a zernike polynomial command
         #     target_config = string.strip().split("\n")[0].split(" ")[0]
         #     print('target_config', target_config)
