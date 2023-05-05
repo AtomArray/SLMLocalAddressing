@@ -534,12 +534,16 @@ class SLMController(QtWidgets.QWidget):
 		try: 
 			i = int(string.split()[-1])
 			print("Setting calibration single spot:" + str(i))
-			data = np.load("SingleSpotCalibration.npz")
-			loadedPhaseProfile = data["phaseProfile"]
+			data = np.load("SingleSpotCalibration.npz",  allow_pickle=True)
+			slmSettings = data["slmSettings"]
+			settings, params = slmSettings
+			self.outputPhases = params['outputPhases']
 
-			self.setPhaseProfile(loadedPhaseProfile)
-			self.display.setImage(self.phaseProfile, self.slmZernikeCoefficients.getCalibrationCoefficients(i))
-			
+			self.setPhaseProfile(params['phaseProfile'], calculateOutput = False)
+			print("Updating SLM display")
+			# self.updateSLMDisplay()
+			self.display.setImage(self.phaseProfile, self.slmZernikeCoefficients.getCalibrationCoefficients(i), transformations = False)
+
 		except Exception as e: 
 			print("Error:", e)
 
@@ -558,8 +562,6 @@ class SLMController(QtWidgets.QWidget):
 			self.targetIntensityProfile = data["targetIntensityProfile"]
 			self.correctionFactors = data["correctionFactors"]
 			self.outputPhases = data["outputPhases"]
-
-
 
 			self.setPhaseProfile(loadedPhaseProfile)
 
@@ -1633,7 +1635,7 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 		self.V_2pi = 141
 
 	# phaseProfile encodes phase at each pixel in radians, represented in floating points.
-	def setImage(self, phaseProfile_arg, zernikeCoefficients=None):
+	def setImage(self, phaseProfile_arg, zernikeCoefficients=None, transformations= True):
 		if not self.enable:
 			return
 
@@ -1675,44 +1677,44 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 
 		#print("Final output phase profile:", self.finalOutputPhaseProfile_radians)
 
+		if transformations == True:
+			#Rotating hologram here!! Sepehr 9/8/2022
+			temp = self.finalOutputPhaseProfile_radians
+			if type(zernikeCoefficients) != type(None):
+				self.finalOutputPhaseProfile_radians = rotate(temp, zernikeCoefficients[-3])#The -2nd order to be the rotation
 
-		#Rotating hologram here!! Sepehr 9/8/2022
-		temp = self.finalOutputPhaseProfile_radians
-		if type(zernikeCoefficients) != type(None):
-			self.finalOutputPhaseProfile_radians = rotate(temp, zernikeCoefficients[-3])#The -2nd order to be the rotation
+			#Zooming hologram here!! Sophie 3/16/2023 
+			temp = self.finalOutputPhaseProfile_radians
+			if type(zernikeCoefficients) != type(None): 
+				factor = zernikeCoefficients[-1]
+				resized = np.zeros_like(temp)
+				zoomed = cv2.resize(temp, None, fx=factor, fy=factor)
+				print("failed after zoom")
+				h, w = temp.shape
+				zh, zw = zoomed.shape
+				
+				if factor == 1: 
+					resized = zoomed
+				elif factor<1:    # zero padded
+					# resized[int((h-zh)/2):int(-(h-zh)/2), int((w-zw)/2):int(-(w-zw)/2)] = zoomed
+					resized = zoomed
+				else:               # clip out
+					# resized = zoomed[int((zh-h)/2):int(-(zh-h)/2), int((zw-w)/2):int(-(zw-w)/2)]
+					resized = zoomed[:h,:w]
 
-		#Zooming hologram here!! Sophie 3/16/2023 
-		temp = self.finalOutputPhaseProfile_radians
-		if type(zernikeCoefficients) != type(None): 
-			factor = zernikeCoefficients[-1]
-			resized = np.zeros_like(temp)
-			zoomed = cv2.resize(temp, None, fx=factor, fy=factor)
-			
-			h, w = temp.shape
-			zh, zw = zoomed.shape
-			
-			if factor == 1: 
-				resized = zoomed
-			elif factor<1:    # zero padded
-				# resized[int((h-zh)/2):int(-(h-zh)/2), int((w-zw)/2):int(-(w-zw)/2)] = zoomed
-				resized = zoomed
-			else:               # clip out
-				# resized = zoomed[int((zh-h)/2):int(-(zh-h)/2), int((zw-w)/2):int(-(zw-w)/2)]
-				resized = zoomed[:h,:w]
-
-			# print("rescaled phases: " + str(resized.shape))
-			# plt.subplot(131), imshow(temp)
-			# plt.title('Original Image')
-			# plt.subplot(132), imshow(resized)
-			# plt.title('Resized Image')
-			# plt.show()
-			#sqrt_num_squared = np.sqrt(np.sum(resized)**2.0)
-			# resized /= sqrt_num_squared
-			# resized = resized / np.max(resized) * 2*np.pi
-			temp-= np.min(temp)
-			temp += 2.0*np.pi # (To completely ensure non-negative phases)
-			temp = np.fmod(temp, 2.0*np.pi)
-			self.finalOutputPhaseProfile_radians = resized
+				# print("rescaled phases: " + str(resized.shape))
+				# plt.subplot(131), imshow(temp)
+				# plt.title('Original Image')
+				# plt.subplot(132), imshow(resized)
+				# plt.title('Resized Image')
+				# plt.show()
+				#sqrt_num_squared = np.sqrt(np.sum(resized)**2.0)
+				# resized /= sqrt_num_squared
+				# resized = resized / np.max(resized) * 2*np.pi
+				temp-= np.min(temp)
+				temp += 2.0*np.pi # (To completely ensure non-negative phases)
+				temp = np.fmod(temp, 2.0*np.pi)
+				self.finalOutputPhaseProfile_radians = resized
 		
 		#Aperturing hologram!! Sepehr 9/8/2022
 		temp = self.finalOutputPhaseProfile_radians
@@ -1783,12 +1785,11 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 def main():
 	app = QtWidgets.QApplication(sys.argv)
 
-	slmController = SLMController(app, shouldEnableSLMDisplay=True, shouldEnableThorcam=True)
-
-	targetIntensities = np.zeros(slmController.dims)
+	slmController = SLMController(app, shouldEnableSLMDisplay=True, shouldEnableThorcam=False)
+	#targetIntensities = np.zeros(slmController.dims)
 	
 	#slmController.feedbackToSimulatedField()
-
+	slmController.setCalibrationSingleSpot("test 0")
 	slmController.show()
 
 	app.exec_()
@@ -1803,7 +1804,7 @@ def main2():
 
 
 if __name__ == "__main__":
-	main2()
+	main()
 	# app = QtWidgets.QApplication(sys.argv)
 
 	# print(QtWidgets.QDesktopWidget().screenGeometry(1))
