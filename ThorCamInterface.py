@@ -162,6 +162,10 @@ class ThorCamInterface(QtWidgets.QWidget):
 
 		self.slmCoordinates = []
 
+		self.centerZero = np.array([[0,0],[0,0]])
+		self.centerTranslated = np.array([[1,1],[1,1]])
+		self.cameraToZernike = 1
+		#self.loadPreviousCalibration("translation")
 
 		# self.setFixedWidth(750)
 		self.setFixedHeight(500)
@@ -182,7 +186,7 @@ class ThorCamInterface(QtWidgets.QWidget):
 
 	def loadPreviousCalibration(self, type):
 		try:
-			message = "Loading last" + type + "ThorCam calibration..."
+			message = "Loading last " + type + " ThorCam calibration..."
 			print(message)
 			if type == "local": 
 				lastCalibration = np.load(LAST_LOCAL_CALIBRATION_FILENAME)
@@ -195,13 +199,18 @@ class ThorCamInterface(QtWidgets.QWidget):
 				self.localCorner = lastCalibration["corner"]
 			if type == "trap": 
 				lastCalibration = np.load(LAST_TRAP_CALIBRATION_FILENAME)
-
-				self.trapeX = lastCalibration["eX"]
-				self.trapeY = lastCalibration["eY"]
 				self.trapOrigin = lastCalibration["origin"]
 				self.trapxMarker = lastCalibration["xMarker"]
 				self.trapyMarker = lastCalibration["yMarker"]
 				self.trapCorner = lastCalibration["corner"]
+
+			if type == "translation":
+				lastCalibration = np.load(LAST_TRANSLATION_CALIBRATION_FILENAME)
+
+				self.centerZero = lastCalibration["centerZero"]
+				self.centerTranslated = lastCalibration["centerTranslated"]
+				self.cameraToZernike =  lastCalibration["cameraToZernike"]
+
 		except Exception as e:
 			error_message = "Unable to load" + type + "ThorCam calibration:"
 			print(error_message, e)
@@ -227,7 +236,7 @@ class ThorCamInterface(QtWidgets.QWidget):
 			corner=self.localCorner)
 
 		self.trapOrigin, self.trapxMarker, self.trapyMarker, self.trapCorner = np.array(trapCornerPositions)
-		
+
 		np.savez(LAST_TRAP_CALIBRATION_FILENAME,
 			origin=self.trapOrigin,
 			xMarker=self.trapxMarker,
@@ -235,21 +244,22 @@ class ThorCamInterface(QtWidgets.QWidget):
 			corner=self.trapCorner)
 		
 		self.centerZero, self.centerTranslated = np.array(translationPositions)
+		diff = self.centerTranslated - self.centerZero
+		factor = 1000/np.linalg.norm(diff)
+		self.cameraToZernike = factor
 
 		np.savez(LAST_TRANSLATION_CALIBRATION_FILENAME,
 			centerZero=self.centerZero,
 			centerTranslated=self.centerTranslated,
-			zernikeCoefficient=zernikeCoefficient) 
+			cameraToZernike=self.cameraToZernike) 
 
 	def convertSLMCoordsToCameraCoords(self, y, x):
 		pos = (self.origin + self.eX * x + self.eY * y).astype(np.int32)
 
 		return pos
 
-
 	def markSLMCoordinates(self, coords):
 		self.slmCoordinates = coords
-
 
 	def setFullAOI(self):
 		self.thorcam.setAOI(0, 0, 1280, 1024)

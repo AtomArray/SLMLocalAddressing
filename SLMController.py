@@ -318,7 +318,7 @@ class SLMController(QtWidgets.QWidget):
 		
 
 		
-		titleLabel = QtWidgets.QLabel("SLM Controller")
+		titleLabel = QtWidgets.QLabel("Local SLM Controller")
 		titleLabel.setAlignment(QtCore.Qt.AlignCenter)
 		titleLabel.setFont(QtGui.QFont('Arial', 20))
 
@@ -620,14 +620,107 @@ class SLMController(QtWidgets.QWidget):
 
 
 		self.thorCamInterface.resumeUpdateThread()
-
+#################################################
 	def autoAlign(self): 
-		self.thorCamInterface.pauseUpdateThread()
+		self.translationAlignment()
+		self.rotationAlignment()
+		self.zoomAlignment()
 
-		# rotation alignment 
-		# zoom alignment 
-		# translation alignment 
+	def translationAlignment(self):
+		yIndex = 1 
+		xIndex = 2 
 
+		axis_orientation = np.array([-1,-1])
+
+		lOrigin = self.thorCamInterface.localOrigin
+		tOrigin = self.thorCamInterface.trapOrigin
+
+		offsetCamera = tOrigin - lOrigin
+		offsetZernike = self.thorCamInterface.cameraToZernike * offsetCamera * axis_orientation
+
+		print(offsetZernike)
+
+		# Zernike Y-tilt (Corresponds to Y move on thorcam) += Camera y move 
+		self.slmZernikeCoefficients.coefficients[yIndex] += offsetZernike[0]
+		# Zernike X-tilt (Corresponds to X move on thocam) += Camera x move 
+		self.slmZernikeCoefficients.coefficients[xIndex] += offsetZernike[1] 
+
+		# Update the Zernike Coefficients table 
+		self.slmZernikeCoefficients.setItem(yIndex, 1, QtWidgets.QTableWidgetItem("%s" %self.slmZernikeCoefficients.coefficients[yIndex]))
+		self.slmZernikeCoefficients.setItem(xIndex, 1, QtWidgets.QTableWidgetItem("%s" %self.slmZernikeCoefficients.coefficients[xIndex]))
+		self.slmZernikeCoefficients.updateCallback()
+		
+		#self.updateCoordinates(offsetCamera)
+		
+		print("Y-tilt: %s" %self.slmZernikeCoefficients.coefficients[yIndex])
+		print("X-tilt: %s" %self.slmZernikeCoefficients.coefficients[xIndex])
+ 
+	
+	def rotationAlignment(self): 
+		rotationIndex = -3
+		Origin = self.thorCamInterface.trapOrigin
+
+		Corners = [np.array(self.thorCamInterface.localCorner), 
+		np.array(self.thorCamInterface.trapCorner)]
+
+		vectors = []
+		for c in Corners: 
+			vector = c-Origin
+			vector = vector/np.linalg.norm(vector)
+			vectors.append(vector)
+
+		theta = -1*np.degrees(np.arccos(np.dot(vectors[0],vectors[1])))
+		# theta = 20
+		nZernike = len(self.slmZernikeCoefficients.coefficients)
+		self.slmZernikeCoefficients.coefficients[rotationIndex] += theta
+		
+		self.slmZernikeCoefficients.setItem(nZernike+rotationIndex, 1, QtWidgets.QTableWidgetItem("%s" %self.slmZernikeCoefficients.coefficients[rotationIndex]))
+		print("Rotation: %s" %self.slmZernikeCoefficients.coefficients[rotationIndex])
+		# self.updateCoordinates(1)  ##### Not figured out yet 
+		self.slmZernikeCoefficients.updateCallback()
+
+	def zoomAlignment(self): 
+		zoomIndex = -1
+		Origin = self.thorCamInterface.trapOrigin
+		
+		lCorners = np.array([self.thorCamInterface.localOrigin, self.thorCamInterface.localxMarker, self.thorCamInterface.localyMarker, self.thorCamInterface.localCorner])
+		
+		tCorners = np.array([self.thorCamInterface.trapOrigin, self.thorCamInterface.trapxMarker, self.thorCamInterface.trapyMarker, self.thorCamInterface.trapCorner])
+		
+		params = np.array([lCorners, tCorners])
+		distance = []
+		
+		for cornerSet in params: 
+			x_distance = np.linalg.norm(cornerSet[3] - cornerSet[1]) 
+			y_distance = np.linalg.norm(cornerSet[3] - cornerSet[2]) 
+			distance.append(np.average([x_distance, y_distance]))
+		print("length of local and length of trap edges")
+		print(distance)
+		zoom_factor = distance[0]*1.4/distance[1] ## Note  hard coded factor!
+		
+		#self.updateCoordinates(zoom_factor*2, type = "mul")
+
+		self.slmZernikeCoefficients.coefficients[zoomIndex] = zoom_factor
+		
+		nZernike = len(self.slmZernikeCoefficients.coefficients)-1
+		self.slmZernikeCoefficients.setItem(nZernike, 1, QtWidgets.QTableWidgetItem("%s" %self.slmZernikeCoefficients.coefficients[zoomIndex]))
+		print("Zoom: %s" %self.slmZernikeCoefficients.coefficients[zoomIndex])
+
+		self.slmZernikeCoefficients.updateCallback()
+
+	def updateCoordinates(self, translation): 
+		coords = [self.thorCamInterface.localOrigin,
+		self.thorCamInterface.localxMarker,
+		self.thorCamInterface.localyMarker,
+		self.thorCamInterface.localCorner] 
+
+		if type == "sum": 
+			for corner in coords: 
+				corner += translation
+		if type == "mul": 
+			for corner in coords: 
+				corner *= translation
+##############################################	
 	def feedbackOnCamera(self):
 		self.thorCamInterface.pauseUpdateThread()
 
@@ -835,10 +928,9 @@ class SLMController(QtWidgets.QWidget):
 		trap_corners_array = np.zeros((4,2))
 		translation_array = np.zeros((2,2))
 
-		local_corners_string, trap_corners_string, translation_string = string.split("_")
-		local_coordinates = local_corners_string.split(",")
-		trap_coordinates = trap_corners_string.split(",")
-		translation_coordinates = translation_string.split(",")
+		title, local_corners_string, trap_corners_string, translation_string = string.split("_")
+
+		print(local_corners_string)
 
 		local_corners_array = self.arrayFromString(local_corners_string, local_corners_array)
 		trap_corners_array = self.arrayFromString(trap_corners_string, trap_corners_array)
@@ -1689,7 +1781,6 @@ class SLMDisplay(QtWidgets.QLabel): #(QtGui.QLabel):
 				factor = zernikeCoefficients[-1]
 				resized = np.zeros_like(temp)
 				zoomed = cv2.resize(temp, None, fx=factor, fy=factor)
-				print("failed after zoom")
 				h, w = temp.shape
 				zh, zw = zoomed.shape
 				
@@ -1789,7 +1880,9 @@ def main():
 	#targetIntensities = np.zeros(slmController.dims)
 	
 	#slmController.feedbackToSimulatedField()
-	slmController.setCalibrationSingleSpot("test 0")
+	#slmController.setCalibrationSingleSpot("test 0")
+
+	slmController.translationAlignment()
 	slmController.show()
 
 	app.exec_()
@@ -1797,14 +1890,17 @@ def main():
 def main2():
 	app = QtWidgets.QApplication(sys.argv)
 
-	slmController = SLMController(app, shouldEnableSLMDisplay=True, shouldEnableThorcam=True)
-	slmController.calibrateLA()
+	slmController = SLMController(app, shouldEnableSLMDisplay=True, shouldEnableThorcam=False)
+	# slmController.calibrateLA()
+	slmController.saveLocalCorners("CORNERSFROMBEAST_832.3850588809344 228.8236973984525,577.6356237932162 239.30979487074197,838.854624584103 484.36067616190775,585.3384123317245 494.48343252831427,_946.9438620072618 130.43462428833678,481.048526384743 258.1384326209707,835.8623327857473 605.6743720323575,484.90718394322624 610.846690029438,_592.8361726898426 486.626678670289,593.2394463215963 493.0312304268768,")
 	#slmController.show()
+	slmController.show()
 	app.exec_()
 
 
 if __name__ == "__main__":
-	main()
+	main2()
 	# app = QtWidgets.QApplication(sys.argv)
-
+	# example  string: 
+	# CORNERSFROMBEAST_832.3850588809344 228.8236973984525,577.6356237932162 239.30979487074197,838.854624584103 484.36067616190775,585.3384123317245 494.48343252831427,_946.9438620072618 130.43462428833678,481.048526384743 258.1384326209707,835.8623327857473 605.6743720323575,484.90718394322624 610.846690029438,_592.8361726898426 486.626678670289,593.2394463215963 493.0312304268768,
 	# print(QtWidgets.QDesktopWidget().screenGeometry(1))
